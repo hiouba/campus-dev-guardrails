@@ -1,0 +1,20 @@
+{
+  "name": "campus-dev-guardrails",
+  "version": "0.1.0",
+  "description": "MCP server + 43 条护栏规则 + lint_project 静态扫描 —— 校园 uni-app / 微信小程序开发规范护栏（由线上事故沉淀）",
+  "main": "server/index.js",
+  "bin": {
+    "campus-dev-guardrails": "server/index.js",
+    "campus-guardrails-lint": "bin/lint-cli.js"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "lint": "node bin/lint-cli.js"
+  },
+  "engines": { "node": ">=18" },
+  "files": ["server/index.js", "bin/lint-cli.js", "rules/rules.json"],
+  "keywords": ["mcp", "modelcontextprotocol", "uni-app", "miniprogram", "wechat", "校园", "lint", "guardrails", "best-practices", "claude", "cursor"],
+  "author": "hiouba <hiouba@126.com>",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "repository": { "type": "git", "url": "git+https://github.com/hiouba/campus-dev-guardrails.git" }
+}

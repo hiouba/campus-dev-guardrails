@@ -1,0 +1,444 @@
+{
+  "version": "0.1.0",
+  "source": "鸥吧校园小程序开发规范 · 由真实线上事故沉淀",
+  "categories": {
+    "platform": "小程序 / uni-app 平台约束与暗坑",
+    "packaging": "包体积与分包",
+    "compliance": "微信审核与合规",
+    "performance": "性能与渲染",
+    "interaction": "交互与体验",
+    "engineering": "工程化"
+  },
+  "rules": [
+    {
+      "id": "platform.inline-style-rpx",
+      "cat": "platform",
+      "sev": "error",
+      "title": "行内 style 不能写 rpx",
+      "symptom": "背景正常但尺寸为 0，元素消失或塌陷",
+      "rule": "rpx 单位只在 CSS/WXSS 文件中被编译转换；写进模板行内 style 不会被转换，真机上直接失效",
+      "fix": "行内样式按 1rpx=0.5px 换算成 px（以 375 设计宽为基准），或把样式移入 class",
+      "lintable": true
+    },
+    {
+      "id": "platform.wxss-no-star",
+      "cat": "platform",
+      "sev": "error",
+      "title": "WXSS 不支持 * 通配选择器",
+      "symptom": "开发者工具正常，真机报样式编译错误、整页样式丢失",
+      "rule": "*、*.class 等通配选择器在 WXSS 中不合法，模拟器不报错、真机才暴露",
+      "fix": "用显式类名选择器；确需全局效果放在页面根容器类上",
+      "lintable": true
+    },
+    {
+      "id": "platform.wxss-no-pseudo",
+      "cat": "platform",
+      "sev": "error",
+      "title": "不支持 :hover / :active 伪类",
+      "symptom": "按压反馈无效果",
+      "rule": "WXSS 不支持指针/按压伪类",
+      "fix": "组件用 hover-class 属性，view 加 hover-class + hover-stay-time",
+      "lintable": true
+    },
+    {
+      "id": "platform.wxss-no-backdrop",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "做不了毛玻璃",
+      "symptom": "backdrop-filter 真机无效",
+      "rule": "小程序渲染层不支持 backdrop-filter 模糊",
+      "fix": "降级为半透明纯色遮罩；或图片上叠低透明度色块模拟",
+      "lintable": false
+    },
+    {
+      "id": "platform.background-shorthand-reset",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "background 简写会重置 background-image",
+      "symptom": "后写的 background 颜色把先声明的背景图清掉",
+      "rule": "CSS background 简写会把未声明的子属性重置为初始值",
+      "fix": "改用 background-color / background-image 分属性书写；改样式前先确认类名唯一、无多处声明",
+      "lintable": false
+    },
+    {
+      "id": "platform.calc-column-overflow",
+      "cat": "platform",
+      "sev": "error",
+      "title": "多列等宽卡片禁止写死单列宽",
+      "symptom": "两列布局在个别机型上静默折成一行一列",
+      "rule": "calc((100% - 16rpx)/2) 这类写法有 1~2rpx 舍入误差就会溢出换行",
+      "fix": "用 flex + width:50% + box-sizing，或 grid-template-columns:repeat(2,1fr)（组件库支持时）",
+      "lintable": false
+    },
+    {
+      "id": "platform.defineprops-ts-type",
+      "cat": "platform",
+      "sev": "error",
+      "title": "TS 类型式 defineProps 会让小程序产物丢 type",
+      "symptom": "真机报 Cannot set properties of undefined (setting 'type')，且报错被归到无关页面的 wxss 上",
+      "rule": "defineProps<{...}>() 泛型写法在部分 uni-app 编译链路下产物 properties 缺 type 字段",
+      "fix": "统一对象式 defineProps({ title: String })；数值类 prop 写 [String, Number] 兼容模板插值",
+      "lintable": true
+    },
+    {
+      "id": "platform.easycom-unimodules",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "easycom 对 uni_modules 未必自动生效",
+      "symptom": "真机报 Component is not found / 组件不渲染但无报错",
+      "rule": "自动扫描依赖工具链版本，失败是静默的",
+      "fix": "pages.json easycom.custom 写显式规则；验收只看编译产物 pages/**.json 的 usingComponents 是否注入",
+      "lintable": false
+    },
+    {
+      "id": "platform.nested-block-comment",
+      "cat": "platform",
+      "sev": "error",
+      "title": "块注释禁止嵌套",
+      "symptom": "WXSS 编译报错、后半个注释泄露成选择器",
+      "rule": "CSS 注释 /* ... /* ... */ */ 嵌套时第一个 */ 提前闭合",
+      "fix": "注释内容避免出现 */ 序列",
+      "lintable": false
+    },
+    {
+      "id": "platform.image-lazy-attr",
+      "cat": "platform",
+      "sev": "info",
+      "title": "image 懒加载属性是连字符 lazy-load",
+      "symptom": "驼峰写法不生效",
+      "rule": "<image lazy-load> 带连字符，进入上下三屏才加载",
+      "fix": "长列表图片统一加 lazy-load；删除素材必须移出 static/ 目录（改名照样进包）",
+      "lintable": false
+    },
+    {
+      "id": "platform.animation-fill-both",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "animation-fill-mode:both 会永久压住状态样式",
+      "symptom": "动画播完后元素停在末帧，后续状态切换失效",
+      "rule": "both/forwards 保持末帧样式，优先级高于普通声明",
+      "fix": "播完移除动画类；或用 keyframes 末帧与目标状态一致后再清 animation",
+      "lintable": true
+    },
+    {
+      "id": "platform.animation-replay",
+      "cat": "platform",
+      "sev": "info",
+      "title": "重播 CSS 动画要换 animation-name",
+      "symptom": "再次触发同动画无反应",
+      "rule": "同名 animation 重新赋值不会重启",
+      "fix": "成对 keyframes（xx-a / xx-b）交替切换 animation-name；或先置 none 强制回流",
+      "lintable": false
+    },
+    {
+      "id": "platform.motion-transform-opacity",
+      "cat": "platform",
+      "sev": "info",
+      "title": "动效只动 transform 与 opacity",
+      "symptom": "动画掉帧、布局抖动",
+      "rule": "动 width/top/margin 触发重排",
+      "fix": "进度条一律 transform:scaleX()（transform-origin 对齐起点）；位移用 translate",
+      "lintable": false
+    },
+    {
+      "id": "platform.statusbar-padding",
+      "cat": "platform",
+      "sev": "error",
+      "title": "自定义导航必须预留状态栏高度",
+      "symptom": "页面标题与时间/信号/电量重叠",
+      "rule": "navigationStyle:custom 下状态栏空间由页面自己负责",
+      "fix": "navigationBarHeight = statusBarHeight + 44px；用 uni.getSystemInfo().statusBarHeight 动态取值",
+      "lintable": false
+    },
+    {
+      "id": "platform.401-overlay",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "401 全屏遮罩会吃掉整页点击",
+      "symptom": "整页按钮点不动，无任何报错",
+      "rule": "统一请求层在 401 时弹全屏登录遮罩，层叠在业务层之上",
+      "fix": "排查顺序：整页不可点 → 先查接口是否 401；遮罩组件要可关闭并透传后续状态",
+      "lintable": false
+    },
+    {
+      "id": "platform.user-data-10mb",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "USER_DATA_PATH 仅约 10MB 且会被清理",
+      "symptom": "本地缓存的图片过段时间裂图",
+      "rule": "小程序本地存储配额小、无持久承诺，不能当永久素材库",
+      "fix": "关键图走 CDN；确需缓存做缺失降级（重新下载兜底）",
+      "lintable": false
+    },
+    {
+      "id": "platform.h5-top-level-api",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "模块顶层裸调小程序 API 会让 H5 白屏",
+      "symptom": "H5 显示 uni.async.error「连接服务器超时」——实际是 JS 加载失败兜底页",
+      "rule": "页面 onLoad 之外的模块顶层代码直接调 wx.xx/uni.xx 在 H5 端会抛错中断 chunk 加载",
+      "fix": "顶层只放声明；能力调用进生命周期；polyfill 判断不能写 typeof wx !== undefined（H5 也可能挂了 wx）",
+      "lintable": false
+    },
+    {
+      "id": "platform.keyboard-fixed-input",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "fixed 底部输入框不随键盘上移",
+      "symptom": "键盘弹起遮住输入框（聊天页高频事故）",
+      "rule": "position:fixed 元素不响应键盘高度变化",
+      "fix": "监听键盘高度事件动态 translateY；input 加 cursor-spacing；或用 page-meta + scroll 调整",
+      "lintable": false
+    },
+    {
+      "id": "packaging.main-2mb",
+      "cat": "packaging",
+      "sev": "error",
+      "title": "主包 2048KB 红线",
+      "symptom": "上传被拒 main package source size exceed max limit 2048KB",
+      "rule": "包体积以微信开发者工具「本地代码包大小」为准，磁盘目录大小不算数",
+      "fix": "非首屏页面全部下沉分包；静态资源走 CDN；构建产物做体积基线看护",
+      "lintable": false
+    },
+    {
+      "id": "packaging.subpackage-asset-location",
+      "cat": "packaging",
+      "sev": "error",
+      "title": "分包资源必须放该分包 root 下的 static/",
+      "symptom": "分包瘦身失败——资源仍被算进主包",
+      "rule": "放在项目根 static/ 的资源永远进主包，即使只有分包页面在用",
+      "fix": "资源目录下沉为 pages/<sub>/static/；页面内引用路径同步改写",
+      "lintable": true
+    },
+    {
+      "id": "packaging.subpackages-switch",
+      "cat": "packaging",
+      "sev": "error",
+      "title": "分包必须开 optimization.subPackages 开关",
+      "symptom": "模拟器正常，真机分包资源 404",
+      "rule": "manifest.json → mp-weixin.optimization.subPackages 不设为 true，分包不生效",
+      "fix": "确认开关；真机回归分包页",
+      "lintable": true
+    },
+    {
+      "id": "packaging.main-no-sub-ref",
+      "cat": "packaging",
+      "sev": "warn",
+      "title": "主包代码不得引用分包内资源",
+      "symptom": "未加载分包时引用失败",
+      "rule": "依赖方向只能分包→主包",
+      "fix": "共享资源上提主包或走 CDN；组件复用走主包公共目录",
+      "lintable": false
+    },
+    {
+      "id": "packaging.asset-removal",
+      "cat": "packaging",
+      "sev": "info",
+      "title": "删除素材要移出 static/，不是改文件名",
+      "symptom": "「清理了」但包体积没降",
+      "rule": "static/ 目录内文件无论是否被引用都会打进包",
+      "fix": "移出构建目录（如 _removed_assets/，注意也须在构建目录外）",
+      "lintable": false
+    },
+    {
+      "id": "compliance.share-inducement",
+      "cat": "compliance",
+      "sev": "error",
+      "title": "诱导分享是红线",
+      "symptom": "轻则分享接口被禁，重则下架/主体连带",
+      "rule": "微信《运营规范》对强制分享、奖励诱导分享、虚假分享有 6 类明确界定",
+      "fix": "裂变玩法先做合规判定：分享解锁内容→违规；分享得奖励→违规；改为「好友助力需真实访问」或去掉奖励",
+      "lintable": false
+    },
+    {
+      "id": "compliance.category-license",
+      "cat": "compliance",
+      "sev": "warn",
+      "title": "类目资质先行",
+      "symptom": "提审被驳，功能全量卡住",
+      "rule": "社区/论坛类目需 ICP 备案，备案主体须与小程序主体一致；社交/直播等有额外前置",
+      "fix": "立项即核类目表；企业主体可备 50 个域名成本低，个人主体受限多",
+      "lintable": false
+    },
+    {
+      "id": "compliance.privacy-declaration",
+      "cat": "compliance",
+      "sev": "error",
+      "title": "采集即声明",
+      "symptom": "隐私接口调不通或提审驳回",
+      "rule": "收集手机号、位置、地址、相册等信息必须在用户隐私保护指引中声明对应用途",
+      "fix": "对照所调用接口逐项声明；未声明的敏感接口（如位置）会直接返回失败",
+      "lintable": false
+    },
+    {
+      "id": "compliance.pay-entity",
+      "cat": "compliance",
+      "sev": "info",
+      "title": "支付三件套",
+      "symptom": "支付下单报 no authorized",
+      "rule": "微信支付需企业主体 + 商户号 + 商户号与小程序 AppID 关联，三者缺一",
+      "fix": "过渡期可先「人工确认收款」，但类目审核要看真实业务",
+      "lintable": false
+    },
+    {
+      "id": "compliance.client-no-secrets",
+      "cat": "compliance",
+      "sev": "error",
+      "title": "客户端代码零机密",
+      "symptom": "反编译脱敏包发现真实域名/密钥——泄露不可撤回",
+      "rule": "小程序包可被解包；服务器地址、密钥、内部运营参数、后台路径一律不得进前端包",
+      "fix": "发布前全量扫描敏感模式（IP/密钥格式/内部域名/后台标识）；配置用占位符",
+      "lintable": false
+    },
+    {
+      "id": "compliance.review-version-hint",
+      "cat": "compliance",
+      "sev": "info",
+      "title": "提审体验账号与版本描述",
+      "symptom": "审核员进不去直接拒",
+      "rule": "有登录墙必须提供体验账号；版本描述写清服务模式与内容边界",
+      "fix": "首次审核可关真实支付；预留审核演示数据路径",
+      "lintable": false
+    },
+    {
+      "id": "performance.richtext-bloat",
+      "cat": "performance",
+      "sev": "warn",
+      "title": "富文本渲染两大经典事故",
+      "symptom": "表情图突然撑成全屏大图；图片溢出容器",
+      "rule": "后端 HTML 直接渲染时 img 无尺寸约束、表情是内联 img",
+      "fix": "渲染组件设 tag-style 白名单（img max-width:100%），表情按原始尺寸限高",
+      "lintable": false
+    },
+    {
+      "id": "performance.long-list",
+      "cat": "performance",
+      "sev": "info",
+      "title": "长列表虚拟化",
+      "symptom": "滚动掉帧、setData 卡顿",
+      "rule": "单次 setData 数据量与节点数是小程序性能主瓶颈",
+      "fix": "分页组件（z-paging 等）+ 只更新变更字段；图片懒加载；避免整列表全量刷新",
+      "lintable": false
+    },
+    {
+      "id": "performance.asset-compress",
+      "cat": "performance",
+      "sev": "info",
+      "title": "素材进包前压缩",
+      "symptom": "一张 logo 1MB，包体积告急",
+      "rule": "原始设计稿尺寸/格式直接进包是常态浪费",
+      "fix": "按展示尺寸裁切（如 400×400）、转 jpg/webp；图标走 SVG；建立素材基线脚本防回潮",
+      "lintable": false
+    },
+    {
+      "id": "performance.canvas-verify-chain",
+      "cat": "performance",
+      "sev": "info",
+      "title": "canvas 海报先离线验证再上真机",
+      "symptom": "海报生成失败但看不到报错，真机调试成本高",
+      "rule": "小程序 canvas 绘制链路报错不可见、调试回路长",
+      "fix": "用 node-canvas 同逻辑本地出图验证版式，再移植；二维码等关键元素留出安全区",
+      "lintable": false
+    },
+    {
+      "id": "interaction.toast-replace",
+      "cat": "interaction",
+      "sev": "info",
+      "title": "全局浮层要自建",
+      "symptom": "原生 toast 黑框丑、且小程序没有全局根组件",
+      "rule": "uni.showToast 样式不可定制，无全局挂载点",
+      "fix": "自建全局浮层组件 + 逐页挂载 + 批量替换调用；统一动效与时长",
+      "lintable": false
+    },
+    {
+      "id": "interaction.no-emoji-icon",
+      "cat": "interaction",
+      "sev": "warn",
+      "title": "禁止拿 emoji 当功能图标",
+      "symptom": "跨机型 emoji 渲染不一致、无法控色",
+      "rule": "emoji 不是图标资产",
+      "fix": "图标落 SVG 文件（static/ui/*.svg）或用图标库",
+      "lintable": false
+    },
+    {
+      "id": "interaction.press-feedback",
+      "cat": "interaction",
+      "sev": "info",
+      "title": "可点元素必须有按压反馈",
+      "symptom": "用户不确定是否点中了",
+      "rule": "小程序无 :active，默认无按压态",
+      "fix": "hover-class 统一按压缩放/透明度反馈（如 scale(.97)）",
+      "lintable": false
+    },
+    {
+      "id": "engineering.compile-fingerprint",
+      "cat": "engineering",
+      "sev": "warn",
+      "title": "改了不生效先对时间戳",
+      "symptom": "代码改了界面没变化，误判为「没写对」",
+      "rule": "多数情况是构建产物没更新或看错产物目录",
+      "fix": "比对编译产物与源码 mtime；用一处用户可见的文案改动当版本指纹",
+      "lintable": false
+    },
+    {
+      "id": "engineering.crlf",
+      "cat": "engineering",
+      "sev": "info",
+      "title": "行尾符统一",
+      "symptom": "Windows 下多行文本匹配/补丁静默失败",
+      "rule": "CRLF/LF 混用会让锚点匹配、diff、批量替换失效",
+      "fix": ".gitattributes 定 eol，编辑器统一 LF",
+      "lintable": false
+    },
+    {
+      "id": "engineering.api-contract-audit",
+      "cat": "engineering",
+      "sev": "info",
+      "title": "发版前核对前后端接口契约",
+      "symptom": "后端重构后前端个别页面报接口不存在",
+      "rule": "「前端在调、后端没有」的断裂靠肉眼记忆查不出来",
+      "fix": "脚本枚举前端全部 API 调用，逐个核对路由清单，输出差集",
+      "lintable": false
+    },
+    {
+      "id": "engineering.demo-data-tag",
+      "cat": "engineering",
+      "sev": "info",
+      "title": "演示数据要可识别可清理",
+      "symptom": "演示内容混进真实数据，运营分不清",
+      "rule": "灌虚拟数据必须有合规标识字段与一键清理通道",
+      "fix": "打 demo 标记 + 独立清理脚本；对外展示页加「示例」标识",
+      "lintable": false
+    },
+    {
+      "id": "engineering.git-history-leak",
+      "cat": "engineering",
+      "sev": "error",
+      "title": "开源前 .git 目录必须清零重建",
+      "symptom": "仓库删了敏感文件，但 commit 历史里仍可翻出密钥",
+      "rule": "git 历史不可撤回——任何人 clone 后 checkout 旧 commit 即可看到",
+      "fix": "发布用「快照 git init」：不带历史，一次性提交脱敏后的干净工作树",
+      "lintable": false
+    },
+    {
+      "id": "engineering.chinese-arg-garble",
+      "cat": "engineering",
+      "sev": "info",
+      "title": "Windows 终端传中文参数给 CLI 会乱码",
+      "symptom": "git commit -m 中文变锟斤拷",
+      "rule": "PowerShell/bash 到 git/ssh 的中文参数编码链路不稳定",
+      "fix": "commit message 用英文；文件内容走 UTF-8 文件读写不走命令行参数",
+      "lintable": false
+    },
+    {
+      "id": "platform.component-not-found-dash",
+      "cat": "platform",
+      "sev": "warn",
+      "title": "组件连字符 typo 静默不渲染",
+      "symptom": "<x-nav-bar> 写了但页面上什么都没有，只有一条可忽略的 warning",
+      "rule": "标签名与注册名不一致时组件按未知元素处理，不留白报错",
+      "fix": "验收看编译产物 json 的 usingComponents；模板标签名与注册 key 严格一致",
+      "lintable": false
+    }
+  ]
+}
